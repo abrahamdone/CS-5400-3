@@ -18,6 +18,89 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     let cardinalUMs = new Map();
     let bezierUMs = new Map();
 
+    function drawPrimitive(primitive, color) {
+        let previousPoint = primitive.points.pop();
+        let nextPoint = previousPoint;
+        primitive.points.forEach(segment => {
+            drawLine(nextPoint.x, nextPoint.y, segment.x, segment.y, color);
+            nextPoint = segment;
+        })
+        drawLine(nextPoint.x, nextPoint.y, previousPoint.x, previousPoint.y, color);
+    }
+
+    function drawCircle(circle, color) {
+        let radius = circle.radius;
+        let x = circle.center.x;
+        let y = circle.center.y;
+        let tangent = 0.5522847 * circle.radius;
+        drawComplexLine(
+            [
+                {
+                    curve: api.Curve.Bezier,
+                    start: {x: x + radius, y: y},
+                    end: {x: x, y: y + radius},
+                    controlOne: {x: x + radius, y: y + tangent},
+                    controlTwo: {x: x + tangent, y: y + radius},
+                    tension: 0,
+                    segments: 100
+                },
+                {
+                    curve: api.Curve.Bezier,
+                    start: {x: x, y: y + radius},
+                    end: {x: x - radius, y: y},
+                    controlOne: {x: x - tangent, y: y + radius},
+                    controlTwo: {x: x - radius, y: y + tangent},
+                    tension: 0,
+                    segments: 100
+                },
+                {
+                    curve: api.Curve.Bezier,
+                    start: {x: x - radius, y: y},
+                    end: {x: x, y: y - radius},
+                    controlOne: {x: x - radius, y: y - tangent},
+                    controlTwo: {x: x - tangent, y: y - radius},
+                    tension: 0,
+                    segments: 100
+                },
+                {
+                    curve: api.Curve.Bezier,
+                    start: {x: x, y: y - radius},
+                    end: {x: x + radius, y: y},
+                    controlOne: {x: x + tangent, y: y - radius},
+                    controlTwo: {x: x + radius, y: y - tangent},
+                    tension: 0,
+                    segments: 100
+                },
+            ], color);
+    }
+
+    function drawComplexLine(line, color) {
+        line.segments.forEach(segment => {
+            if (segment.segments <= 2 || segment.controlOne === undefined && segment.controlTwo === undefined) {
+                drawLine(segment.start.x, segment.start.y, segment.end.x, segment.end.y, color);
+            } else {
+                drawCurve(segment, color, false, true, false);
+            }
+        })
+    }
+
+    function makePinwheel(center, spokes, radius) {
+        let arc = 2 * Math.PI / spokes;
+        let nextArc = 0;
+        let segments = [];
+        for (let i = 0; i < spokes; i++) {
+            segments.push(
+                {
+                    start: {x: center.x, y: center.y},
+                    end: {x: center.x + radius * Math.cos(nextArc), y: center.y + radius * Math.sin(nextArc)},
+                    segments: 1
+                }
+            )
+            nextArc += arc;
+        }
+        return {segments: segments, center: center};
+    }
+
     //------------------------------------------------------------------
     //
     // Public function that allows the client code to clear the canvas.
@@ -186,22 +269,22 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Renders an Hermite curve based on the input parameters.
     //
     //------------------------------------------------------------------
-    function drawCurveHermite(controls, segmentColors, showPoints, showLine, showControl) {
-        if (segmentColors.length === 0) {
+    function drawCurveHermite(controls, segments, color, showPoints, showLine, showControl) {
+        if (segments === 0) {
             return;
         }
 
         // Precompute for optimization
-        let UMs = getBlendingFunctions(hermiteUMs, segmentColors.length);
-        if (UMs.size !== segmentColors.length) {
+        let UMs = getBlendingFunctions(hermiteUMs, segments);
+        if (UMs.size !== segments) {
             let M = math.matrix([
                 [ 2, -2,  1,  1],
                 [-3,  3, -2, -1],
                 [ 0,  0,  1,  0],
                 [ 1,  0,  0,  0]
             ]);
-            hermiteUMs = calculateBlendingFunctions(M, segmentColors.length);
-            UMs = getBlendingFunctions(hermiteUMs, segmentColors.length);
+            hermiteUMs = calculateBlendingFunctions(M, segments);
+            UMs = getBlendingFunctions(hermiteUMs, segments);
         }
 
         let pp0 = {x: controls.controlOne.x - controls.start.x, y: controls.controlOne.y - controls.start.y};
@@ -210,11 +293,11 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
         let Py = math.matrix([[controls.start.y], [controls.end.y], [pp0.y], [pp1.y]]);
 
         // Use the precomputed matrices
-        let segmentPoints = calculateSegments(UMs, Px, Py, segmentColors.length);
+        let segmentPoints = calculateSegments(UMs, Px, Py, segments);
 
         segmentPoints.push(controls.end);
 
-        drawSegments(controls, segmentPoints, segmentColors, showPoints, showLine, showControl);
+        drawSegments(controls, segmentPoints, segments, color, showPoints, showLine, showControl);
     }
 
     //------------------------------------------------------------------
@@ -222,14 +305,14 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Renders a Cardinal curve based on the input parameters.
     //
     //------------------------------------------------------------------
-    function drawCurveCardinal(controls, segmentColors, showPoints, showLine, showControl) {
-        if (segmentColors.length === 0) {
+    function drawCurveCardinal(controls, segments, color, showPoints, showLine, showControl) {
+        if (segments === 0) {
             return;
         }
 
         // Precompute for optimization
-        let UMs = getBlendingFunctionsWithTension(cardinalUMs, segmentColors.length, controls.tension);
-        if (UMs.size !== segmentColors.length) {
+        let UMs = getBlendingFunctionsWithTension(cardinalUMs, segments, controls.tension);
+        if (UMs.size !== segments) {
             let s = (1 - controls.tension) / 2;
             let M = math.matrix([
                 [   -s, 2 - s,     s - 2,  s],
@@ -237,19 +320,19 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
                 [   -s,     0,         s,  0],
                 [    0,     1,         0,  0]
             ]);
-            cardinalUMs = calculateBlendingFunctionsWithTension(M, segmentColors.length, controls.tension);
-            UMs = getBlendingFunctionsWithTension(cardinalUMs, segmentColors.length, controls.tension);
+            cardinalUMs = calculateBlendingFunctionsWithTension(M, segments, controls.tension);
+            UMs = getBlendingFunctionsWithTension(cardinalUMs, segments, controls.tension);
         }
 
         let Px = math.matrix([[controls.controlOne.x], [controls.start.x], [controls.end.x], [controls.controlTwo.x]]);
         let Py = math.matrix([[controls.controlOne.y], [controls.start.y], [controls.end.y], [controls.controlTwo.y]]);
 
         // Use the precomputed matrices
-        let segmentPoints = calculateSegments(UMs, Px, Py, segmentColors.length);
+        let segmentPoints = calculateSegments(UMs, Px, Py, segments);
 
         segmentPoints.push(controls.end);
 
-        drawSegments(controls, segmentPoints, segmentColors, showPoints, showLine, showControl);
+        drawSegments(controls, segmentPoints, segments, color, showPoints, showLine, showControl);
     }
 
     //------------------------------------------------------------------
@@ -257,33 +340,33 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Renders a Bezier curve based on the input parameters.
     //
     //------------------------------------------------------------------
-    function drawCurveBezier(controls, segmentColors, showPoints, showLine, showControl) {
-        if (segmentColors.length === 0) {
+    function drawCurveBezier(controls, segments, color, showPoints, showLine, showControl) {
+        if (segments === 0) {
             return;
         }
 
         // Precompute for optimization
-        let UMs = getBlendingFunctions(bezierUMs, segmentColors.length);
-        if (UMs.size !== segmentColors.length) {
+        let UMs = getBlendingFunctions(bezierUMs, segments);
+        if (UMs.size !== segments) {
             let M = math.matrix([
                 [1, -3,  3, -1],
                 [0,  3, -6,  3],
                 [0,  0,  3, -3],
                 [0,  0,  0,  1]
             ]);
-            bezierUMs = calculateBlendingFunctions(M, segmentColors.length);
-            UMs = getBlendingFunctions(bezierUMs, segmentColors.length);
+            bezierUMs = calculateBlendingFunctions(M, segments);
+            UMs = getBlendingFunctions(bezierUMs, segments);
         }
 
         let Px = math.matrix([[controls.start.x], [controls.controlOne.x], [controls.controlTwo.x], [controls.end.x]]);
         let Py = math.matrix([[controls.start.y], [controls.controlOne.y], [controls.controlTwo.y], [controls.end.y]]);
 
         // Use the precomputed matrices
-        let segmentPoints = calculateSegments(UMs, Px, Py, segmentColors.length);
+        let segmentPoints = calculateSegments(UMs, Px, Py, segments);
 
         segmentPoints.push(controls.start);
 
-        drawSegments(controls, segmentPoints, segmentColors, showPoints, showLine, showControl);
+        drawSegments(controls, segmentPoints, segments, color, showPoints, showLine, showControl);
     }
 
     //------------------------------------------------------------------
@@ -397,7 +480,7 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Renders a set of line segments based on the input parameters.
     //
     //------------------------------------------------------------------
-    function drawSegments(controls, segmentPoints, segmentColors, showPoints, showLine, showControl) {
+    function drawSegments(controls, segmentPoints, segments, color, showPoints, showLine, showControl) {
         if (showControl) {
             let controlColor = 'rgb(180, 180, 180)';
             drawPoint(controls.controlOne.x, controls.controlOne.y, controlColor);
@@ -409,8 +492,8 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
             }
         }
         if (showLine) {
-            for (let i = 0; i < segmentColors.length; i++) {
-                drawLine(segmentPoints[i].x, segmentPoints[i].y, segmentPoints[i + 1].x, segmentPoints[i + 1].y, segmentColors[i]);
+            for (let i = 0; i < segments; i++) {
+                drawLine(segmentPoints[i].x, segmentPoints[i].y, segmentPoints[i + 1].x, segmentPoints[i + 1].y, color);
             }
         }
     }
@@ -423,16 +506,16 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // to those not experts in JavaScript.
     //
     //------------------------------------------------------------------
-    function drawCurve(type, controls, segmentColors, showPoints, showLine, showControl) {
-        switch (type) {
+    function drawCurve(controls, color, showPoints, showLine, showControl) {
+        switch (controls.curve) {
             case api.Curve.Hermite:
-                drawCurveHermite(controls, segmentColors, showPoints, showLine, showControl);
+                drawCurveHermite(controls, controls.segments, color, showPoints, showLine, showControl);
                 break;
             case api.Curve.Cardinal:
-                drawCurveCardinal(controls, segmentColors, showPoints, showLine, showControl);
+                drawCurveCardinal(controls, controls.segments, color, showPoints, showLine, showControl);
                 break;
             case api.Curve.Bezier:
-                drawCurveBezier(controls, segmentColors, showPoints, showLine, showControl);
+                drawCurveBezier(controls, controls.segments, color, showPoints, showLine, showControl);
                 break;
         }
     }
@@ -443,7 +526,11 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
         clear: clear,
         drawPixel: drawPixel,
         drawLine: drawLine,
-        drawCurve: drawCurve
+        drawCurve: drawCurve,
+        drawComplexLine: drawComplexLine,
+        drawCircle: drawCircle,
+        drawPrimitive: drawPrimitive,
+        makePinwheel: makePinwheel,
     };
 
     Object.defineProperty(api, 'sizeX', {
