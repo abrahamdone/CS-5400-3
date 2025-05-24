@@ -18,23 +18,52 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     let cardinalUMs = new Map();
     let bezierUMs = new Map();
 
+    function translatePoint(point, distance) {
+        return {x: point.x + distance.x, y: point.y + distance.y};
+    }
+
+    function scalePoint(point, center, scale) {
+
+    }
+
+    function rotatePoint(point, center, angle) {
+
+    }
+
     function drawPrimitive(primitive, color) {
         let previousPoint = primitive.points.pop();
         let nextPoint = previousPoint;
         primitive.points.forEach(segment => {
-            drawLine(nextPoint.x, nextPoint.y, segment.x, segment.y, color);
+            drawLine(nextPoint, segment.x, segment.y, color);
             nextPoint = segment;
         })
-        drawLine(nextPoint.x, nextPoint.y, previousPoint.x, previousPoint.y, color);
+        drawLine(nextPoint, previousPoint, color);
     }
 
-    function drawCircle(circle, color) {
-        let radius = circle.radius;
-        let x = circle.center.x;
-        let y = circle.center.y;
-        let tangent = 0.5522847 * circle.radius;
-        drawComplexLine(
-            [
+    function translatePrimitive(primitive, translate) {
+        let distance = {x: primitive.center.x - translate.x, y: primitive.center.y - translate.y};
+        let newPrimitive = primitive;
+        newPrimitive.points = primitive.points.map(point => {
+            return translatePoint(point, distance);
+        })
+        newPrimitive.center = translatePoint(primitive.center, distance);
+        return newPrimitive;
+    }
+
+    function scalePrimitive(primitive, scale) {
+
+    }
+
+    function rotatePrimitive(primitive, angle) {
+
+    }
+
+    function makeCircle(center, radius) {
+        let x = center.x;
+        let y = center.y;
+        let tangent = 0.5522847 * radius;
+        return {
+            segments: [
                 {
                     curve: api.Curve.Bezier,
                     start: {x: x + radius, y: y},
@@ -71,17 +100,55 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
                     tension: 0,
                     segments: 100
                 },
-            ], color);
+            ],
+            center: center,
+        }
     }
 
     function drawComplexLine(line, color) {
         line.segments.forEach(segment => {
             if (segment.segments <= 2 || segment.controlOne === undefined && segment.controlTwo === undefined) {
-                drawLine(segment.start.x, segment.start.y, segment.end.x, segment.end.y, color);
+                drawLine(segment.start, segment.end, color);
             } else {
                 drawCurve(segment, color, false, true, false);
             }
+        });
+        drawPoint(line.center, color);
+    }
+
+    function translateComplexLine(line, translate) {
+        let distance = {x: line.center.x - translate.x, y: line.center.y - translate.y};
+        let newLine = line;
+        newLine.segments = line.segments.map(segment => {
+            return translateCurve(segment, distance);
         })
+        newLine.center = translatePoint(line.center, distance);
+        return newLine;
+    }
+
+    function scaleComplexLine(line, scale) {
+
+    }
+
+    function rotateComplexLine(line, angle) {
+
+    }
+
+    function translateCurve(curve, distance) {
+        let newCurve = curve;
+        newCurve.start = translatePoint(newCurve.start, distance);
+        newCurve.end = translatePoint(newCurve.end, distance);
+        newCurve.controlOne = translatePoint(newCurve.controlOne, distance);
+        newCurve.controlTwo = translatePoint(newCurve.controlTwo, distance);
+        return newCurve;
+    }
+
+    function scaleCurve(curve, center, scale) {
+
+    }
+
+    function rotateCurve(curve, center, angle) {
+
     }
 
     function makePinwheel(center, spokes, radius) {
@@ -137,12 +204,23 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Public function that renders a "pixel" on the framebuffer.
     //
     //------------------------------------------------------------------
-    function drawPixel(x, y, color) {
-        x = Math.trunc(x);
-        y = Math.trunc(y);
+    function drawDevicePixel(point, color) {
+        let x = Math.trunc(point.x);
+        let y = Math.trunc(point.y);
 
         context.fillStyle = color;
         context.fillRect(x * deltaX, y * deltaY, deltaX, deltaY);
+    }
+
+    function drawPixel(point, color) {
+        drawDevicePixel(convertPointWorldToDevice(point), color);
+    }
+
+    function convertPointWorldToDevice(point) {
+        return {
+            x: Math.floor(pixelsX / 2 + point.x * pixelsX / 2),
+            y: Math.floor(pixelsY / 2 + point.y * pixelsY / 2)
+        };
     }
 
     //------------------------------------------------------------------
@@ -150,15 +228,15 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Helper function used to draw an X centered at a point.
     //
     //------------------------------------------------------------------
-    function drawPoint(x, y, ptColor) {
-        x = Math.trunc(x);
-        y = Math.trunc(y);
+    function drawPoint(point, ptColor) {
+        let x = Math.trunc(point.x);
+        let y = Math.trunc(point.y);
 
-        drawPixel(x - 1, y - 1, ptColor);
-        drawPixel(x + 1, y - 1, ptColor);
-        drawPixel(x, y, ptColor);
-        drawPixel(x + 1, y + 1, ptColor);
-        drawPixel(x - 1, y + 1, ptColor);
+        drawPixel({x: x - 1, y: y - 1}, ptColor);
+        drawPixel({x: x + 1, y: y - 1}, ptColor);
+        drawPixel({x: x, y: y}, ptColor);
+        drawPixel({x: x + 1, y: y + 1}, ptColor);
+        drawPixel({x: x - 1, y: y + 1}, ptColor);
     }
 
     //------------------------------------------------------------------
@@ -166,18 +244,24 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Bresenham line drawing algorithm.
     //
     //------------------------------------------------------------------
-    function drawLine(x1, y1, x2, y2, color) {
+    function drawLine(p1, p2, color) {
+        let devicePoint1 = convertPointWorldToDevice(p1);
+        let devicePoint2 = convertPointWorldToDevice(p2);
+        let x1 = devicePoint1.x;
+        let y1 = devicePoint1.y;
+        let x2 = devicePoint2.x;
+        let y2 = devicePoint2.y;
         // vertical line would divide by 0 so special case
-        if (x1 == x2) {
+        if (x1 === x2) {
             let y = Math.min(y1, y2);
             let d = Math.abs(y2 - y1);
             for (let i = 0; i < d; i++) {
-                drawPixel(x1, y + i, color);
+                drawDevicePixel({x: x1, y: y + i}, color);
             }
             return;
         }
 
-        let o = octant(x1, y1, x2, y2);
+        let o = octant(p1, p2);
         // adjust for octant
         // octant 5-7 are mirrored over x-axis so swap start and end points
         if (o >= 4) {
@@ -217,16 +301,16 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
             // also reverse mirror operations for specific octant
             switch (o) {
                 case 0:
-                    drawPixel(y + y1, x + x1, color);
+                    drawDevicePixel({x: y + y1, y: x + x1}, color);
                     break;
                 case 1:
-                    drawPixel(x + x1, y + y1, color);
+                    drawDevicePixel({x: x + x1, y: y + y1}, color);
                     break;
                 case 2:
-                    drawPixel(x + x1, -y - y1, color);
+                    drawDevicePixel({x: x + x1, y: -y - y1}, color);
                     break;
                 case 3:
-                    drawPixel(y + y1, -x - x1, color);
+                    drawDevicePixel( {x: y + y1, y: -x - x1}, color);
                     break;
             }
             // calculate p_(k + 1)
@@ -245,9 +329,9 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     // Find the quadrant the slope lies in.
     //
     //------------------------------------------------------------------
-    function octant(x1, y1, x2, y2) {
-        let m = (y2 - y1) / (x2 - x1);
-        let o = x2 > x1 ? 0 : 4;
+    function octant(p1, p2) {
+        let m = (p2.y - p1.y) / (p2.x - p1.x);
+        let o = p2.x > p1.x ? 0 : 4;
 
         if (m >= 0) {
             if (m >= 1) {
@@ -483,17 +567,17 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
     function drawSegments(controls, segmentPoints, segments, color, showPoints, showLine, showControl) {
         if (showControl) {
             let controlColor = 'rgb(180, 180, 180)';
-            drawPoint(controls.controlOne.x, controls.controlOne.y, controlColor);
-            drawPoint(controls.controlTwo.x, controls.controlTwo.y, controlColor);
+            drawPoint(controls.controlOne, controlColor);
+            drawPoint(controls.controlTwo, controlColor);
         }
         if (showPoints) {
             for (let i = 0; i < segmentPoints.length; i++) {
-                drawPoint(segmentPoints[i].x, segmentPoints[i].y, 'rgb(255, 255, 255)');
+                drawPoint(segmentPoints[i], 'rgb(255, 255, 255)');
             }
         }
         if (showLine) {
             for (let i = 0; i < segments; i++) {
-                drawLine(segmentPoints[i].x, segmentPoints[i].y, segmentPoints[i + 1].x, segmentPoints[i + 1].y, color);
+                drawLine(segmentPoints[i], segmentPoints[i + 1], color);
             }
         }
     }
@@ -527,10 +611,19 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
         drawPixel: drawPixel,
         drawLine: drawLine,
         drawCurve: drawCurve,
-        drawComplexLine: drawComplexLine,
-        drawCircle: drawCircle,
-        drawPrimitive: drawPrimitive,
+        makeCircle: makeCircle,
         makePinwheel: makePinwheel,
+        drawComplexLine: drawComplexLine,
+        drawPrimitive: drawPrimitive,
+        translatePrimitive: translatePrimitive,
+        scalePrimitive: scalePrimitive,
+        rotatePrimitive: rotatePrimitive,
+        translateCurve: translateCurve,
+        scaleCurve: scaleCurve,
+        rotateCurve: rotateCurve,
+        translateComplexLine: translateComplexLine,
+        scaleComplexLine: scaleComplexLine,
+        rotateComplexLine: rotateComplexLine,
     };
 
     Object.defineProperty(api, 'sizeX', {
