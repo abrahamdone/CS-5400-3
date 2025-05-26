@@ -146,70 +146,32 @@ MySample.main = (function(graphics) {
         } else {
             speedStep += 1;
             if (speedStep < 100) {
-                switch (speed) {
-                    case -1:
-                        speedTranslate.x += 0.001;
-                        break;
-                    case 1:
-                        speedTranslate.x -= 0.001;
-                        break;
-                }
+                speedTranslate.x -= speed * 0.001;
             } else if (speedStep > 600) {
-                switch (speed) {
-                    case -1:
-                        speedTranslate.x -= 0.001;
-                        break;
-                    case 1:
-                        speedTranslate.x += 0.001;
-                        break;
-                }
+                speedTranslate.x += speed * 0.001;
             }
         }
 
         if (tireRotation <= 0) {
             tireRotation = 2 * Math.PI;
         }
-        switch (speed) {
-            case -1:
-                tireRotation -= 0.03;
-                break;
-            case 0:
-                tireRotation -= 0.05;
-                break;
-            case 1:
-                tireRotation -= 0.07;
-                break;
-        }
+        tireRotation -= 0.05 + speed * 0.02;
 
         if (scaleStep === 0) {
-            scaleStep = 1;
             let random = (Math.floor(Math.random() * 3) - 1);
             if (scaleDirection !== random) {
                 scaleDirection = random;
             }
+            scaleStep = 1;
         } else if (scaleStep === 500) {
             scaleStep = 0;
             scaleFactor = 1;
         } else {
             scaleStep += 1;
             if (scaleStep < 30) {
-                switch (scaleDirection) {
-                    case -1:
-                        scaleFactor -= 0.001;
-                        break;
-                    case 1:
-                        scaleFactor += 0.001;
-                        break;
-                }
+                scaleFactor += scaleDirection * 0.001;
             } else if (scaleStep > 470) {
-                switch (scaleDirection) {
-                    case -1:
-                        scaleFactor += 0.001;
-                        break;
-                    case 1:
-                        scaleFactor -= 0.001;
-                        break;
-                }
+                scaleFactor -= scaleDirection * 0.001;
             }
         }
     }
