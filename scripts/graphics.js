@@ -67,8 +67,13 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
         }
     }
 
-    function scalePrimitive(primitive, scale) {
-        let newScaleFunction = scaleFunction(primitive.center, scale);
+    function scalePrimitive(primitive, scale, center) {
+        let newScaleFunction;
+        if (center !== undefined) {
+            newScaleFunction = scaleFunction(center, scale);
+        } else {
+            newScaleFunction = scaleFunction(primitive.center, scale);
+        }
         return {
             points: primitive.points.map(point => {
                 return newScaleFunction(point);
@@ -77,14 +82,97 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
         }
     }
 
-    function rotatePrimitive(primitive, angle) {
-        let newRotateFunction = rotateFunction(primitive.center, angle);
+    function rotatePrimitive(primitive, angle, center) {
+        let newRotateFunction;
+        if (center !== undefined) {
+            newRotateFunction = rotateFunction(center, angle);
+        } else {
+            newRotateFunction = rotateFunction(primitive.center, angle);
+        }
         return {
             points: primitive.points.map(point => {
                 return newRotateFunction(point);
             }),
             center: primitive.center
         }
+    }
+
+    function drawComplexLine(line, color) {
+        line.segments.forEach(segment => {
+            if (segment.segments <= 2 || segment.controlOne === undefined && segment.controlTwo === undefined) {
+                drawLine(segment.start, segment.end, color);
+            } else {
+                drawCurve(segment, color, false, true, false);
+            }
+        });
+    }
+
+    function translateComplexLine(line, translate) {
+        let newTranslateFunction = translateFunction(translate);
+        return {
+            segments: line.segments.map(segment => {
+                return modifyCurve(segment, newTranslateFunction);
+            }),
+            center: newTranslateFunction(line.center)
+        }
+    }
+
+    function scaleComplexLine(line, scale, center) {
+        let newScaleFunction;
+        if (center !== undefined) {
+            newScaleFunction = scaleFunction(center, scale);
+        } else {
+            newScaleFunction = scaleFunction(line.center, scale);
+        }
+        return {
+            segments: line.segments.map(segment => {
+                return modifyCurve(segment, newScaleFunction);
+            }),
+            center: line.center
+        };
+    }
+
+    function rotateComplexLine(line, angle, center) {
+        let newRotateFunction;
+        if (center !== undefined) {
+            newRotateFunction = rotateFunction(center, angle);
+        } else {
+            newRotateFunction = rotateFunction(line.center, angle);
+        }
+        return {
+            segments: line.segments.map(segment => {
+                return modifyCurve(segment, newRotateFunction);
+            }),
+            center: line.center
+        };
+    }
+
+    function translateCurve(curve, translate) {
+        return modifyCurve(curve, translateFunction(translate));
+    }
+
+    function scaleCurve(curve, center, scale) {
+        return modifyCurve(curve, scaleFunction(center, scale));
+    }
+
+    function rotateCurve(curve, center, angle) {
+        return modifyCurve(curve, rotateFunction(center, angle));
+    }
+
+    function modifyCurve(curve, modifyFunction) {
+        let newCurve = {
+            start: modifyFunction(curve.start),
+            end: modifyFunction(curve.end),
+            segments: curve.segments
+        }
+        if (curve.curve !== undefined) {
+            newCurve.curve = curve.curve;
+        }
+        if (curve.controlOne !== undefined && curve.controlTwo !== undefined) {
+            newCurve.controlOne = modifyFunction(curve.controlOne);
+            newCurve.controlTwo = modifyFunction(curve.controlTwo);
+        }
+        return newCurve
     }
 
     function makeCircle(center, radius) {
@@ -132,84 +220,6 @@ MySample.graphics = function(pixelsX, pixelsY, showPixels) {
             ],
             center: center,
         }
-    }
-
-    function drawComplexLine(line, color) {
-        line.segments.forEach(segment => {
-            if (segment.segments <= 2 || segment.controlOne === undefined && segment.controlTwo === undefined) {
-                drawLine(segment.start, segment.end, color);
-            } else {
-                drawCurve(segment, color, false, true, false);
-            }
-        });
-    }
-
-    function translateComplexLine(line, translate) {
-        let newTranslateFunction = translateFunction(translate);
-        return {
-            segments: line.segments.map(segment => {
-                return modifyCurve(segment, newTranslateFunction);
-            }),
-            center: newTranslateFunction(line.center)
-        }
-    }
-
-    function scaleComplexLine(line, scale, center) {
-        let newScaleFunction;
-        if (center === undefined) {
-            newScaleFunction = scaleFunction(line.center, scale);
-        } else {
-            newScaleFunction = scaleFunction(center, scale);
-        }
-        return {
-            segments: line.segments.map(segment => {
-                return modifyCurve(segment, newScaleFunction);
-            }),
-            center: line.center
-        };
-    }
-
-    function rotateComplexLine(line, angle, center) {
-        let newRotateFunction;
-        if (center === undefined) {
-            newRotateFunction = rotateFunction(line.center, angle);
-        } else {
-            newRotateFunction = rotateFunction(center, angle);
-        }
-        return {
-            segments: line.segments.map(segment => {
-                return modifyCurve(segment, newRotateFunction);
-            }),
-            center: line.center
-        };
-    }
-
-    function translateCurve(curve, translate) {
-        return modifyCurve(curve, translateFunction(translate));
-    }
-
-    function scaleCurve(curve, center, scale) {
-        return modifyCurve(curve, scaleFunction(center, scale));
-    }
-
-    function rotateCurve(curve, center, angle) {
-        return modifyCurve(curve, rotateFunction(center, angle));
-    }
-
-    function modifyCurve(curve, modifyFunction) {
-        let newCurve = {
-            start: modifyFunction(curve.start),
-            end: modifyFunction(curve.end),
-            segments: curve.segments
-        }
-        if (curve.curve !== undefined) {
-            newCurve.curve = curve.curve;
-        }
-        if (curve.controlOne !== undefined && curve.controlTwo !== undefined) {
-            newCurve.controlOne = modifyFunction(curve.controlOne);
-            newCurve.controlTwo = modifyFunction(curve.controlTwo);
-        }
-        return newCurve
     }
 
     function makePinwheel(center, spokes, radius) {
