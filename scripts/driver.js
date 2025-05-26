@@ -1,3 +1,5 @@
+// noinspection JSVoidFunctionReturnValueUsed
+
 MySample.main = (function(graphics) {
     'use strict';
 
@@ -6,7 +8,7 @@ MySample.main = (function(graphics) {
     let tireColor = "rgb(80, 80, 80)";
     let spokeColor = "rgb(255, 255, 255)";
     let windowColor = "rgb(50, 143, 168)";
-    let bummperColor = "rgb(70, 70, 70)";
+    let bumperColor = "rgb(70, 70, 70)";
     let car = {
         segments: [
             {
@@ -98,7 +100,7 @@ MySample.main = (function(graphics) {
             {x: 0.23, y: 0.25}
         ], center: {x: 0, y: 0}
     }
-    let bummper1 = {
+    let bumper1 = {
         points: [
             {x: 0.6, y: 0.5},
             {x: 0.65, y: 0.5},
@@ -106,7 +108,7 @@ MySample.main = (function(graphics) {
             {x: 0.6, y: 0.4}
         ], center: {x: 0, y: 0}
     }
-    let bummper2 = {
+    let bumper2 = {
         points: [
             {x: -0.6, y: 0.5},
             {x: -0.65, y: 0.5},
@@ -114,16 +116,15 @@ MySample.main = (function(graphics) {
             {x: -0.6, y: 0.45}
         ], center: {x: 0, y: 0}
     }
-    let tireRotation = 0.0;
 
-    let scale = 1;
+    let scaleStep = 0;
     let scaleDirection = 1;
+    let scaleFactor = 1;
 
     let speedStep = 0;
-    let scaleStep = 0;
     let speed = 1;
-
     let speedTranslate = {x: 0, y: 0};
+    let tireRotation = 0.0;
 
 
     //------------------------------------------------------------------
@@ -133,10 +134,14 @@ MySample.main = (function(graphics) {
     //------------------------------------------------------------------
     function update(elapsedTime) {
         if (speedStep === 0) {
-            speed = (Math.floor(Math.random() * 3) - 1);
+            let random = (Math.floor(Math.random() * 3) - 1);
+            if (speed !== random) {
+                speed = random;
+            }
             speedStep = 1;
-        } else if (speedStep === 500) {
+        } else if (speedStep === 700) {
             speedStep = 0;
+            speed = 0;
             speedTranslate = {x: 0, y: 0};
         } else {
             speedStep += 1;
@@ -149,7 +154,7 @@ MySample.main = (function(graphics) {
                         speedTranslate.x -= 0.001;
                         break;
                 }
-            } else if (speedStep > 400) {
+            } else if (speedStep > 600) {
                 switch (speed) {
                     case -1:
                         speedTranslate.x -= 0.001;
@@ -166,40 +171,43 @@ MySample.main = (function(graphics) {
         }
         switch (speed) {
             case -1:
-                tireRotation -= 0.03;
+                tireRotation -= 0.04;
                 break;
             case 0:
                 tireRotation -= 0.05;
                 break;
             case 1:
-                tireRotation -= 0.07;
+                tireRotation -= 0.06;
                 break;
         }
 
         if (scaleStep === 0) {
             scaleStep = 1;
-            scaleDirection = (Math.floor(Math.random() * 3) - 1);
-        } else if (scaleStep === 200) {
+            let random = (Math.floor(Math.random() * 3) - 1);
+            if (scaleDirection !== random) {
+                scaleDirection = random;
+            }
+        } else if (scaleStep === 500) {
             scaleStep = 0;
-            scale = 1;
+            scaleFactor = 1;
         } else {
             scaleStep += 1;
-            if (scaleStep < 20) {
+            if (scaleStep < 30) {
                 switch (scaleDirection) {
                     case -1:
-                        scale -= 0.001;
+                        scaleFactor -= 0.001;
                         break;
                     case 1:
-                        scale += 0.001;
+                        scaleFactor += 0.001;
                         break;
                 }
-            } else if (scaleStep > 180) {
+            } else if (scaleStep > 470) {
                 switch (scaleDirection) {
                     case -1:
-                        scale += 0.001;
+                        scaleFactor += 0.001;
                         break;
                     case 1:
-                        scale -= 0.001;
+                        scaleFactor -= 0.001;
                         break;
                 }
             }
@@ -214,37 +222,38 @@ MySample.main = (function(graphics) {
     function render() {
         graphics.clear();
 
+        let scale = {x: scaleFactor, y: scaleFactor};
         let transformedCar = car;
         transformedCar = graphics.translateComplexLine(transformedCar, speedTranslate);
-        transformedCar = graphics.scaleComplexLine(transformedCar, {x: scale, y: scale});
+        transformedCar = graphics.scaleComplexLine(transformedCar, scale);
         let transformedTire1 = tire1;
         transformedTire1 = graphics.translateComplexLine(transformedTire1, speedTranslate);
-        transformedTire1 = graphics.scaleComplexLine(transformedTire1, {x: scale, y: scale}, transformedCar.center);
+        transformedTire1 = graphics.scaleComplexLine(transformedTire1, scale, transformedCar.center);
         let transformedTire2 = tire2;
         transformedTire2 = graphics.translateComplexLine(transformedTire2, speedTranslate);
-        transformedTire2 = graphics.scaleComplexLine(transformedTire2, {x: scale, y: scale}, transformedCar.center);
+        transformedTire2 = graphics.scaleComplexLine(transformedTire2, scale, transformedCar.center);
         let transformedSpoke1 = spokes1;
         transformedSpoke1 = graphics.translateComplexLine(transformedSpoke1, speedTranslate);
         transformedSpoke1 = graphics.rotateComplexLine(transformedSpoke1, tireRotation);
-        transformedSpoke1 = graphics.scaleComplexLine(transformedSpoke1, {x: scale, y: scale}, transformedCar.center);
+        transformedSpoke1 = graphics.scaleComplexLine(transformedSpoke1, scale, transformedCar.center);
         let transformedSpoke2 = spokes2;
         transformedSpoke2 = graphics.translateComplexLine(transformedSpoke2, speedTranslate);
         transformedSpoke2 = graphics.rotateComplexLine(transformedSpoke2, tireRotation);
-        transformedSpoke2 = graphics.scaleComplexLine(transformedSpoke2, {x: scale, y: scale}, transformedCar.center);
+        transformedSpoke2 = graphics.scaleComplexLine(transformedSpoke2, scale, transformedCar.center);
         let transformedWindow1 = window1;
         transformedWindow1 = graphics.translatePrimitive(transformedWindow1, speedTranslate);
-        transformedWindow1 = graphics.scalePrimitive(transformedWindow1, {x: scale, y: scale}, transformedCar.center);
+        transformedWindow1 = graphics.scalePrimitive(transformedWindow1, scale, transformedCar.center);
         let transformedWindow2 = window2;
         transformedWindow2 = graphics.translatePrimitive(transformedWindow2, speedTranslate);
-        transformedWindow2 = graphics.scalePrimitive(transformedWindow2, {x: scale, y: scale}, transformedCar.center);
-        let transformedBummper1 = bummper1;
-        transformedBummper1 = graphics.translatePrimitive(transformedBummper1, speedTranslate);
-        transformedBummper1 = graphics.scalePrimitive(transformedBummper1, {x: scale, y: scale}, transformedCar.center);
-        let transformedBummper2 = bummper2;
-        transformedBummper2 = graphics.translatePrimitive(transformedBummper2, speedTranslate);
-        transformedBummper2 = graphics.scalePrimitive(transformedBummper2, {x: scale, y: scale}, transformedCar.center);
-        graphics.drawPrimitive(transformedBummper2, bummperColor);
-        graphics.drawPrimitive(transformedBummper1, bummperColor);
+        transformedWindow2 = graphics.scalePrimitive(transformedWindow2, scale, transformedCar.center);
+        let transformedBumper1 = bumper1;
+        transformedBumper1 = graphics.translatePrimitive(transformedBumper1, speedTranslate);
+        transformedBumper1 = graphics.scalePrimitive(transformedBumper1, scale, transformedCar.center);
+        let transformedBumper2 = bumper2;
+        transformedBumper2 = graphics.translatePrimitive(transformedBumper2, speedTranslate);
+        transformedBumper2 = graphics.scalePrimitive(transformedBumper2, scale, transformedCar.center);
+        graphics.drawPrimitive(transformedBumper2, bumperColor);
+        graphics.drawPrimitive(transformedBumper1, bumperColor);
         graphics.drawComplexLine(transformedCar, carColor);
         graphics.drawComplexLine(transformedTire1, tireColor);
         graphics.drawComplexLine(transformedTire2, tireColor);
