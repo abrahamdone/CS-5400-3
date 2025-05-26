@@ -6,6 +6,7 @@ MySample.main = (function(graphics) {
     let tireColor = "rgb(80, 80, 80)";
     let spokeColor = "rgb(255, 255, 255)";
     let windowColor = "rgb(50, 143, 168)";
+    let bummperColor = "rgb(70, 70, 70)";
     let car = {
         segments: [
             {
@@ -95,6 +96,22 @@ MySample.main = (function(graphics) {
             {x: 0.03, y: 0.08},
             {x: 0.23, y: 0.08},
             {x: 0.23, y: 0.25}
+        ], center: {x: 0, y: 0}
+    }
+    let bummper1 = {
+        points: [
+            {x: 0.6, y: 0.5},
+            {x: 0.65, y: 0.5},
+            {x: 0.65, y: 0.4},
+            {x: 0.6, y: 0.4}
+        ], center: {x: 0, y: 0}
+    }
+    let bummper2 = {
+        points: [
+            {x: -0.6, y: 0.5},
+            {x: -0.65, y: 0.5},
+            {x: -0.65, y: 0.45},
+            {x: -0.6, y: 0.45}
         ], center: {x: 0, y: 0}
     }
     let tireRotation = 0.0;
@@ -200,32 +217,40 @@ MySample.main = (function(graphics) {
         let transformedCar = car;
         transformedCar = graphics.translateComplexLine(transformedCar, speedTranslate);
         transformedCar = graphics.scaleComplexLine(transformedCar, {x: scale, y: scale});
-        graphics.drawComplexLine(transformedCar, carColor);
         let transformedTire1 = tire1;
         transformedTire1 = graphics.translateComplexLine(transformedTire1, speedTranslate);
         transformedTire1 = graphics.scaleComplexLine(transformedTire1, {x: scale, y: scale}, transformedCar.center);
-        graphics.drawComplexLine(transformedTire1, tireColor);
         let transformedTire2 = tire2;
         transformedTire2 = graphics.translateComplexLine(transformedTire2, speedTranslate);
         transformedTire2 = graphics.scaleComplexLine(transformedTire2, {x: scale, y: scale}, transformedCar.center);
-        graphics.drawComplexLine(transformedTire2, tireColor);
         let transformedSpoke1 = spokes1;
         transformedSpoke1 = graphics.translateComplexLine(transformedSpoke1, speedTranslate);
         transformedSpoke1 = graphics.rotateComplexLine(transformedSpoke1, tireRotation);
         transformedSpoke1 = graphics.scaleComplexLine(transformedSpoke1, {x: scale, y: scale}, transformedCar.center);
-        graphics.drawComplexLine(transformedSpoke1, spokeColor);
         let transformedSpoke2 = spokes2;
         transformedSpoke2 = graphics.translateComplexLine(transformedSpoke2, speedTranslate);
         transformedSpoke2 = graphics.rotateComplexLine(transformedSpoke2, tireRotation);
         transformedSpoke2 = graphics.scaleComplexLine(transformedSpoke2, {x: scale, y: scale}, transformedCar.center);
-        graphics.drawComplexLine(transformedSpoke2, spokeColor);
         let transformedWindow1 = window1;
         transformedWindow1 = graphics.translatePrimitive(transformedWindow1, speedTranslate);
         transformedWindow1 = graphics.scalePrimitive(transformedWindow1, {x: scale, y: scale}, transformedCar.center);
-        graphics.drawPrimitive(transformedWindow1, windowColor);
         let transformedWindow2 = window2;
         transformedWindow2 = graphics.translatePrimitive(transformedWindow2, speedTranslate);
         transformedWindow2 = graphics.scalePrimitive(transformedWindow2, {x: scale, y: scale}, transformedCar.center);
+        let transformedBummper1 = bummper1;
+        transformedBummper1 = graphics.translatePrimitive(transformedBummper1, speedTranslate);
+        transformedBummper1 = graphics.scalePrimitive(transformedBummper1, {x: scale, y: scale}, transformedCar.center);
+        let transformedBummper2 = bummper2;
+        transformedBummper2 = graphics.translatePrimitive(transformedBummper2, speedTranslate);
+        transformedBummper2 = graphics.scalePrimitive(transformedBummper2, {x: scale, y: scale}, transformedCar.center);
+        graphics.drawPrimitive(transformedBummper2, bummperColor);
+        graphics.drawPrimitive(transformedBummper1, bummperColor);
+        graphics.drawComplexLine(transformedCar, carColor);
+        graphics.drawComplexLine(transformedTire1, tireColor);
+        graphics.drawComplexLine(transformedTire2, tireColor);
+        graphics.drawComplexLine(transformedSpoke1, spokeColor);
+        graphics.drawComplexLine(transformedSpoke2, spokeColor);
+        graphics.drawPrimitive(transformedWindow1, windowColor);
         graphics.drawPrimitive(transformedWindow2, windowColor);
     }
 
